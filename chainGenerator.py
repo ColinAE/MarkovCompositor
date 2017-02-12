@@ -121,7 +121,7 @@ class chainGenerator:
 
 
 def main():
-	reddit = obtainRedditInstance("Jy60yC2zzsvuPA", "ARZgKEmrP2t0UEOgwiRlcsxbA8o", "emergence8*link", "Excavator", "WorldPulse")
+	reddit = obtainRedditInstance(*CREDENTIALS REMOVED*)
 	generator = chainGenerator(reddit)
 	generator.monitor()
 
