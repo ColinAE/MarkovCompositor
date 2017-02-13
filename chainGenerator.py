@@ -4,8 +4,9 @@ import numpy as numpyimport
 import matplotlib.pyplot as pyplot
 import nltk
 import markovify
+import pickle
 
-debug = True
+debug = False
 
 # Returns instance of Reddit with supplied credentials
 def obtainRedditInstance(clientId, clientSecret, password, agent, user):
@@ -81,15 +82,15 @@ class chainGenerator:
 	# Checks if the summon contains a valid user list. All users must be valid.
 	def validUsers(self, comment):
 		splitted = comment.split()
-		size = len(splitted)
+		userCount = len(splitted) - 1
 		allUsers = []
 		if debug:
-			print("Validity Checking")
-		if size >= 1 and size <= 5:
+			print("Validity checking...")
+		if userCount >= 1 and userCount <= 3:
 			for potentialUser in splitted[1:]:
 				if self.user_exists(potentialUser):
 					allUsers.append(potentialUser)
-			return len(allUsers) == size - 1
+			return len(allUsers) == userCount
 
 	# Extracts the user list from the comment.
 	def extractUsers(self, comment):
@@ -110,11 +111,20 @@ class chainGenerator:
 	# Monitors the The_Summoning_Pit's comment stream.
 	def monitor(self):
 		search = False
+		latest = ""
+		try:
+			latest = open(r'latest.pkl', 'rb')
+			latest = pickle.load(latest)
+			search = True
+		except:
+			latest = ""
 		for comment in self.reddit.subreddit('The_Summoning_Pit').stream.comments():
-			print(comment.body)
-			if search and comment == latest:
+			if debug:
+				print(comment.body)
+
+			if search == True and comment == latest:
 				search = False
-			else:
+			elif search == False:
 				body = comment.body
 				if debug:
 					print("body: " + body)
@@ -122,7 +132,12 @@ class chainGenerator:
 					if self.validUsers(body):
 						users = self.extractUsers(body)
 						self.reply(comment, users)
+					else:
+						print("Commenting on failure...")
+						comment.reply("Invalid Summon. Must contain 1-3 space-separated usernames.")
 				latest = comment
+				outfile = open(r'latest.pkl', 'wb')
+				pickle.dump(latest, outfile)
 
 	# Replies to the comment
 	def reply(self, comment, users):
@@ -146,6 +161,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-
-
-
