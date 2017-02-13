@@ -38,14 +38,21 @@ class chainGenerator:
 		if user in chainGenerator.storage:
 			return
 		userComments = []
+
+		# Fetches the latest comments by an user, places an ending character at the end
+		# of each comment if one is not already there, and concatenates all comments together
+		# for later generation of Markov model.
 		comments = self.reddit.redditor(user).comments.new(limit = 1000)
 		for comment in comments:
 			body = comment.body
 			if not self.isEnder(body[-1]):
 				body += ('.')
 			userComments.append(body)
+
+		# Stores the comments for later, since Reddit API calls are expensive.
 		chainGenerator.storage[user] = userComments
 
+	# Generates a markov model 
 	def generateModel(self, users):
 		if users in chainGenerator.models:
 			return
@@ -57,11 +64,12 @@ class chainGenerator:
 		model = markovify.Text(allComments)
 		chainGenerator.models[users] = model
 
+	# Uses Markov model to generate a simulated comment
 	def speak(self, users):
-		if users not in chainGenerator.models:
-			self.generateModel(users)
+		self.generateModel(users)
 		return "MarkComp Bot: " + chainGenerator.models[users].make_sentence()
 
+	# Checks if the given user exists.
 	def user_exists(self, user):
 		exists = True
 		try:
@@ -70,6 +78,7 @@ class chainGenerator:
 			exists = False
 		return exists
 
+	# Checks if the summon contains a valid user list. All users must be valid.
 	def validUsers(self, comment):
 		splitted = comment.split()
 		size = len(splitted)
@@ -82,11 +91,13 @@ class chainGenerator:
 					allUsers.append(potentialUser)
 			return len(allUsers) == size - 1
 
+	# Extracts the user list from the comment.
 	def extractUsers(self, comment):
 		if debug:
 			print("Extracting")
 		return comment.split()[1:]
 
+	# Checks if the comment contains a summon.
 	def wasSummoned(self, comment):
 		if debug:
 			print("Summon Check")
@@ -96,6 +107,7 @@ class chainGenerator:
 				return True
 		return False
 
+	# Monitors the The_Summoning_Pit's comment stream.
 	def monitor(self):
 		search = False
 		for comment in self.reddit.subreddit('The_Summoning_Pit').stream.comments():
@@ -112,16 +124,23 @@ class chainGenerator:
 						self.reply(comment, users)
 				latest = comment
 
+	# Replies to the comment
 	def reply(self, comment, users):
 		if debug:
 			print("Replying...")
-		users = tuple(users)
+		users = tuple(users) # Convert to tuple because 'users' needs to be a hashable set.
 		spoken = self.speak(users)
 		comment.reply(spoken)
 
-
 def main():
-	reddit = obtainRedditInstance("Jy60yC2zzsvuPA", "ARZgKEmrP2t0UEOgwiRlcsxbA8o", "emergence8*link", "Excavator", "WorldPulse")
+	credentials = open(r'credentials.pkl', 'rb')
+	credentials = pickle.load(credentials)
+	clientId = credentials[0]
+	clientSecret = credentials[1]
+	password = credentials[2]
+	agent = credentials[3]
+	user = credentials[4]
+	reddit = obtainRedditInstance(clientId, clientSecret, password, agent, user)
 	generator = chainGenerator(reddit)
 	generator.monitor()
 
